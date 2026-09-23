@@ -1,0 +1,11 @@
+/*
+!/.gitignore
+!/README.md
+!/.github/
+/.github/*
+!/.github/ISSUE_TEMPLATE/
+/.github/ISSUE_TEMPLATE/*
+!/.github/ISSUE_TEMPLATE/review-request.yml
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/reviewer-summary.yml

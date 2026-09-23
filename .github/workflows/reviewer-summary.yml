@@ -1,0 +1,15 @@
+name: Reviewer Summary (skeleton)
+
+on:
+  schedule:
+    - cron: '25 3 * * 0'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain pending integration
+        run: echo 'Reviewer Summary computation is not yet available.'
