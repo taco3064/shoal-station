@@ -1,12 +1,14 @@
 # Shoal station
 
-This repository is the canonical **Network Root** and station template for [Shoal](https://taco3064.github.io/shoal-app/), a network of independent repository reviews backed by public evidence. The Network Root supplies the initial Review Policy and the managed Review Request and Summary Workflow files. It is not itself a Reviewer Node.
+This repository is the canonical **Network Root** for [Shoal](https://taco3064.github.io/shoal-app/), a network of independent repository reviews backed by public evidence. Because the Network Root belongs to a Personal GitHub Account, this repository is also its owner's **Reviewer Node**. It receives Review Requests through its Issues and runs the canonical Reviewer Summary Workflow. Its GitHub Repository ID is the stable Reviewer Node identity; being the Network Root does not exempt it from Shoal's Protocol or eligibility checks.
 
-A Personal GitHub Account creates a Reviewer Node by **directly forking this Network Root**. A fork of another Reviewer's fork does not qualify. In an eligible direct fork, this `README.md` becomes that Reviewer's own public Review Policy. Reviewers may change their Policy and are responsible for the criteria they publish; Shoal does not require a fixed README layout. The Review Request form and Summary Workflow are Shoal-managed files synchronized from this Network Root by `gh shoal init` without overwriting the Reviewer's `README.md`.
+For this Root owner, this `README.md` is the **live Review Policy source of truth**. Changes to it change the Root owner's Policy and the initial Policy that future direct forks receive. Existing forks retain their own independently owned README and are not rewritten when the Root Policy changes.
+
+Other Personal GitHub Accounts create Reviewer Nodes by **directly forking this Network Root**. A fork of another Reviewer's fork does not qualify, nor does an Organization-owned repository. In a direct fork, the copied `README.md` becomes that Reviewer's own public Review Policy. Reviewers may change their Policy and are responsible for the criteria they publish; Shoal does not require a fixed README layout. The Review Request form and Summary Workflow are Shoal-managed files synchronized from this Network Root to direct forks by `gh shoal init` without overwriting the Reviewer's `README.md`. The Root itself is the canonical source of those files and does not run `gh shoal init` against itself.
 
 ## Initial Review / Star Policy
 
-This is the default Policy provided to new Reviewer Nodes. **All eight conditions are required.** They are not weighted, scored, or bonus signals. If any condition cannot be established from verifiable evidence, the result under this default Policy is **FAIL**, not a Star.
+This is the Root owner's current Review Policy and the initial Policy provided to future direct forks. **All eight conditions are required.** They are not weighted, scored, or bonus signals. If any condition cannot be established from verifiable evidence, the result under this Policy is **FAIL**, not a Star.
 
 1. **Originality.** The repository demonstrates substantive original work or a meaningful original solution. Tutorial reproductions, course clones, and copies without substantive contribution do not meet this condition.
 2. **Engineering evolution.** The repository exposes meaningful engineering evolution through traceable problems, decisions, corrections, tradeoffs, or iterative improvement.
