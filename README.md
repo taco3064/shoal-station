@@ -1,10 +1,8 @@
 # Shoal station
 
-This repository is the canonical **Network Root** for [Shoal](https://taco3064.github.io/shoal-app/), a network of independent repository reviews backed by public evidence. Because the Network Root belongs to a Personal GitHub Account, this repository is also its owner's **Reviewer Node**. It receives Review Requests through its Issues and runs the canonical Reviewer Summary Workflow. Its GitHub Repository ID is the stable Reviewer Node identity; being the Network Root does not exempt it from Shoal's Protocol or eligibility checks.
+This is a **Reviewer Node** in [Shoal](https://taco3064.github.io/shoal-app/), a network of repository reviews backed by public evidence. This `README.md` is the owner's **Review Policy**. Submit a Review Request through this repository's Issues.
 
-For this Root owner, this `README.md` is the **live Review Policy source of truth**. Changes to it change the Root owner's Policy and the initial Policy that future direct forks receive. Existing forks retain their own independently owned README and are not rewritten when the Root Policy changes.
-
-Other Personal GitHub Accounts create Reviewer Nodes by **directly forking this Network Root**. A fork of another Reviewer's fork does not qualify, nor does an Organization-owned repository. In a direct fork, the copied `README.md` becomes that Reviewer's own public Review Policy. Reviewers may change their Policy and are responsible for the criteria they publish; Shoal does not require a fixed README layout. The Review Request form and Summary Workflow are Shoal-managed files synchronized from this Network Root to direct forks by `gh shoal init` without overwriting the Reviewer's `README.md`. The Root itself is the canonical source of those files and does not run `gh shoal init` against itself.
+For how Shoal works and how to join by directly forking the [Network Root](https://github.com/taco3064/shoal-station), visit the [Shoal website](https://taco3064.github.io/shoal-app/). In your fork, edit this README to publish your own review criteria.
 
 ## Initial Review / Star Policy
 
