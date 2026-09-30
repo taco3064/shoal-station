@@ -1,8 +1,8 @@
 # Shoal station
 
-This is a **Reviewer Node** in [Shoal](https://taco3064.github.io/shoal-app/), a network of repository reviews backed by public evidence. This `README.md` is the owner's **Review Policy**. Submit a Review Request through this repository's Issues.
+This is a **Reviewer Node** in Shoal, a network of repository reviews backed by public evidence. This `README.md` is the owner's **Review Policy**. Submit a Review Request through this repository's Issues.
 
-For how Shoal works and how to join by directly forking the [Network Root](https://github.com/taco3064/shoal-station), visit the [Shoal website](https://taco3064.github.io/shoal-app/). In your fork, edit this README to publish your own review criteria.
+For how Shoal works and how to join by directly forking the [Station Root](https://github.com/taco3064/shoal-station), visit the [Shoal App](https://taco3064.github.io/shoal-app/). In your fork, edit this README to publish your own review criteria.
 
 ## Initial Review / Star Policy
 
