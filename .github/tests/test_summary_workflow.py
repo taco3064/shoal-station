@@ -198,6 +198,17 @@ class WorkflowTests(unittest.TestCase):
         self.assertNotIn('secrets.', WORKFLOW_BYTES.decode())
         self.assertNotIn('checkout', WORKFLOW_BYTES.decode())
 
+    def test_all_workflows_parse_and_ci_checks_exact_head(self):
+        for path in (ROOT / '.github/workflows').glob('*.yml'):
+            parsed = yaml.load(path.read_bytes(), Loader=yaml.BaseLoader)
+            self.assertIn('jobs', parsed)
+        verify = yaml.load((ROOT / '.github/workflows/verify.yml').read_bytes(), Loader=yaml.BaseLoader)
+        steps = verify['jobs']['workflow-contract']['steps']
+        self.assertEqual(steps[0]['with']['ref'], '${{ github.event.pull_request.head.sha || github.sha }}')
+        self.assertEqual(steps[0]['with']['persist-credentials'], 'false')
+        self.assertIn('git rev-parse HEAD', steps[1]['run'])
+        self.assertIn('unittest discover', steps[3]['run'])
+
     def test_failed_stage_diagnostics_remain_failed(self):
         diagnostic = SUMMARY[-1]
         self.assertEqual(diagnostic['if'], '${{ failure() }}')
