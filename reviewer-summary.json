@@ -1,0 +1,13 @@
+{
+  "metrics": {
+    "invalidReviewCommentCount": 0,
+    "reReviewRequestIssueCount": 0,
+    "reviewBackedStarCount": 0,
+    "validReviewRequestIssueCount": 0
+  },
+  "protocolVersion": 1,
+  "reviewerNode": {
+    "repositoryId": 1379044983
+  },
+  "summarySchemaVersion": 1
+}
