@@ -9,3 +9,10 @@
 !/.github/workflows/
 /.github/workflows/*
 !/.github/workflows/reviewer-summary.yml
+!/.github/tests/
+/.github/tests/*
+!/.github/tests/test_summary_workflow.py
+!/.github/tests/mock_curl.py
+!/.github/tests/requirements.txt
+!/.github/workflows/verify.yml
+!/.github/tests/runtime-evidence.md

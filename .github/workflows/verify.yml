@@ -1,0 +1,33 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  workflow-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the exact delivered head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Verify checkout identity
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+      - name: Install locked test dependency
+        run: |
+          python3 -m venv "$RUNNER_TEMP/station-tests"
+          "$RUNNER_TEMP/station-tests/bin/python" -m pip install -r .github/tests/requirements.txt
+      - name: Verify workflow byte and recovery boundaries
+        run: "$RUNNER_TEMP/station-tests/bin/python" -m unittest discover -s .github/tests -v
+      - name: Record exact managed-surface identities
+        run: |
+          git show HEAD:.github/workflows/reviewer-summary.yml | sha256sum
+          git show HEAD:.github/ISSUE_TEMPLATE/review-request.yml | sha256sum
