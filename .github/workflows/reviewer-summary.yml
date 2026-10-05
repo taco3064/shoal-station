@@ -41,6 +41,7 @@ jobs:
     if: ${{ needs.mode.outputs.automated_review != 'none' && needs.mode.outputs.automated_review != '' }}
     permissions:
       contents: read
+      issues: read
       copilot-requests: write
       id-token: write
     uses: ./.github/workflows/hosted-review.yml

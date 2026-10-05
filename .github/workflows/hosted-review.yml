@@ -24,6 +24,7 @@ jobs:
     continue-on-error: true
     permissions:
       contents: read
+      issues: read
       copilot-requests: write
       id-token: write
     outputs:

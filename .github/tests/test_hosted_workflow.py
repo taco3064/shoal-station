@@ -181,8 +181,25 @@ class HostedWorkflowTests(unittest.TestCase):
         self.assertNotEqual(hashlib.sha256(HOSTED_BYTES).digest(), hashlib.sha256(replaced).digest())
         self.assertEqual(CALLER_BYTES, (ROOT / '.github/workflows/reviewer-summary.yml').read_bytes())
 
+    def test_read_role_endpoint_permissions_at_both_workflow_boundaries(self):
+        # hosted-review/github.go reads Git contents/refs and Issue/comment endpoints.
+        # Repository metadata and public user enumeration require no extra scope.
+        required = {'contents': 'read', 'issues': 'read'}
+        for boundary in [CALLER, HOSTED]:
+            permissions = boundary['jobs']['hosted']['permissions']
+            for scope, level in required.items():
+                with self.subTest(boundary=boundary['name'], scope=scope):
+                    self.assertEqual(permissions.get(scope), level)
+                    # Removing either permission must invalidate this contract.
+                    missing = dict(permissions)
+                    missing.pop(scope)
+                    self.assertFalse(all(missing.get(key) == value
+                                         for key, value in required.items()))
+            self.assertNotEqual(permissions.get('contents'), 'write')
+            self.assertNotEqual(permissions.get('issues'), 'write')
+
     def test_authority_roles_and_no_credential_persistence(self):
-        expected = {'contents': 'read', 'copilot-requests': 'write', 'id-token': 'write'}
+        expected = {'contents': 'read', 'issues': 'read', 'copilot-requests': 'write', 'id-token': 'write'}
         self.assertEqual(CALLER['jobs']['hosted']['permissions'], expected)
         self.assertEqual(HOSTED['jobs']['hosted']['permissions'], expected)
         for identity in ['review', 're_review']:
