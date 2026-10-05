@@ -9,9 +9,12 @@
 !/.github/workflows/
 /.github/workflows/*
 !/.github/workflows/reviewer-summary.yml
+!/.github/workflows/hosted-review.yml
 !/.github/tests/
 /.github/tests/*
 !/.github/tests/test_summary_workflow.py
+!/.github/tests/test_hosted_workflow.py
+!/.github/tests/hosted_harness.mjs
 !/.github/tests/mock_curl.py
 !/.github/tests/requirements.txt
 !/.github/workflows/verify.yml

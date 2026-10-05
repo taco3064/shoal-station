@@ -1,0 +1,223 @@
+name: Hosted Review
+
+on:
+  workflow_call:
+    inputs:
+      automated_review:
+        required: true
+        type: string
+    outputs:
+      result:
+        description: Credential-free operational state; never a semantic judgment.
+        value: ${{ jobs.hosted.outputs.result }}
+      stop_semantic_work:
+        description: Stop additional semantic work; Reviewer Summary remains independent.
+        value: ${{ jobs.hosted.outputs.stop_semantic_work }}
+
+permissions: {}
+
+jobs:
+  hosted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Hosted infrastructure failure must not reject an otherwise valid Summary run.
+    continue-on-error: true
+    permissions:
+      contents: read
+      copilot-requests: write
+      id-token: write
+    outputs:
+      result: ${{ steps.result.outputs.result }}
+      stop_semantic_work: ${{ steps.result.outputs.stop_semantic_work }}
+    steps:
+      - name: Acquire short-lived Reviewer authority
+        id: authority
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        env:
+          AUTOMATED_REVIEW: ${{ inputs.automated_review }}
+          BROKER_URL: ${{ vars.SHOAL_HOSTED_BROKER_URL }}
+          BROKER_AUDIENCE: ${{ vars.SHOAL_HOSTED_BROKER_AUDIENCE }}
+          REPOSITORY_ID: ${{ github.repository_id }}
+          OWNER_ID: ${{ github.repository_owner_id }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        with:
+          script: |
+            core.setOutput('ready', 'false');
+            const refuse = code => { core.setOutput('code', code); core.warning(code); };
+            if (!['review', 're-review', 'all'].includes(process.env.AUTOMATED_REVIEW)) {
+              refuse('HOSTED_MODE_REFUSED'); return;
+            }
+            if (!process.env.BROKER_URL || !process.env.BROKER_AUDIENCE) {
+              refuse('REVIEWER_AUTHORITY_UNAVAILABLE'); return;
+            }
+            try {
+              const url = new URL(process.env.BROKER_URL);
+              if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {
+                refuse('BROKER_CONFIGURATION_REFUSED'); return;
+              }
+              // An OIDC assertion is requested only for an explicitly enabled mode.
+              const oidc = await core.getIDToken(process.env.BROKER_AUDIENCE);
+              core.setSecret(oidc);
+              const response = await fetch(url, {
+                method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15000),
+                headers: { Authorization: `Bearer ${oidc}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  formatVersion: 1,
+                  repositoryId: process.env.REPOSITORY_ID,
+                  reviewerId: process.env.OWNER_ID,
+                  workflowRef: process.env.WORKFLOW_REF,
+                  workflowSha: process.env.WORKFLOW_SHA,
+                  runId: String(context.runId), runAttempt: process.env.GITHUB_RUN_ATTEMPT
+                })
+              });
+              if (!response.ok) { refuse('REVIEWER_AUTHORITY_UNAVAILABLE'); return; }
+              // Never log raw broker errors, response bodies, headers, or tokens.
+              const reader = response.body.getReader();
+              const chunks = []; let length = 0;
+              for (;;) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                length += value.length;
+                if (length > 8192) { await reader.cancel(); refuse('BROKER_RESULT_REFUSED'); return; }
+                chunks.push(Buffer.from(value));
+              }
+              const result = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+              const expires = Date.parse(result.expiresAt);
+              const now = Date.now();
+              if (result.formatVersion !== 1 || result.repositoryId !== process.env.REPOSITORY_ID ||
+                  result.reviewerId !== process.env.OWNER_ID ||
+                  typeof result.reviewerToken !== 'string' || !/^[A-Za-z0-9_]{20,512}$/.test(result.reviewerToken) ||
+                  !Number.isFinite(expires) || expires <= now + 60000 || expires > now + 8 * 60 * 60 * 1000) {
+                refuse('BROKER_RESULT_REFUSED'); return;
+              }
+              core.setSecret(result.reviewerToken);
+              // Ephemeral same-job runner output only; never a workflow/job output or artifact.
+              core.setOutput('reviewer_token', result.reviewerToken);
+              core.setOutput('ready', 'true');
+              core.setOutput('code', 'AUTHORITY_AVAILABLE');
+            } catch {
+              refuse('REVIEWER_AUTHORITY_UNAVAILABLE');
+            }
+
+      - name: Check out only the Reviewer station
+        id: checkout
+        if: ${{ steps.authority.outputs.ready == 'true' }}
+        continue-on-error: true
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      # Provisional integration pin from action#13, not a final production pin.
+      # Replace only these reusable-workflow pins after the coordinated Action merge.
+      # Reviewer authority supplies Issue-state and personal roles under separate
+      # host allowlists; the Copilot workflow token has no Issue-write permission.
+      - name: Hosted Initial Review
+        id: review
+        if: ${{ steps.authority.outputs.ready == 'true' && steps.checkout.outcome == 'success' && (inputs.automated_review == 'review' || inputs.automated_review == 'all') }}
+        continue-on-error: true
+        uses: taco3064/shoal-action/hosted-review@701c13c0f92d4f9cf53ec41869132f7958d92130
+        with:
+          operation: review
+          station: ${{ github.repository }}
+          station_directory: ${{ github.workspace }}
+          copilot_token: ${{ github.token }}
+          read_token: ${{ github.token }}
+          lifecycle_token: ${{ steps.authority.outputs.reviewer_token }}
+          reviewer_token: ${{ steps.authority.outputs.reviewer_token }}
+          max_ai_credits: '30'
+          timeout_seconds: '180'
+
+      - name: Validate Initial Review operational result before further work
+        id: review_gate
+        if: ${{ always() && inputs.automated_review == 'all' && steps.authority.outputs.ready == 'true' }}
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        env:
+          OUTCOME: ${{ steps.review.outcome }}
+          RESULT: ${{ steps.review.outputs.result }}
+          STATUS: ${{ steps.review.outputs.status }}
+          STOP: ${{ steps.review.outputs.stop_semantic_work }}
+        with:
+          script: |
+            core.setOutput('continue', 'false');
+            try {
+              const r = JSON.parse(process.env.RESULT);
+              if (process.env.OUTCOME !== 'success' || r.formatVersion !== 1 || r.operation !== 'review' ||
+                  !['NO_CHANGES', 'COMPLETED', 'PARTIAL', 'REFUSED'].includes(r.runtime?.status) ||
+                  r.runtime.status !== process.env.STATUS || typeof r.stopSemanticWork !== 'boolean' ||
+                  String(r.stopSemanticWork) !== process.env.STOP ||
+                  !Array.isArray(r.failures) || r.failures.some(c => typeof c !== 'string' || !/^[A-Z][A-Z0-9_]{0,79}$/.test(c))) {
+                core.warning('HOSTED_RESULT_REFUSED'); return;
+              }
+              if (!r.stopSemanticWork && r.runtime.status !== 'REFUSED' && r.failures.length === 0) {
+                core.setOutput('continue', 'true');
+              }
+            } catch { core.warning('HOSTED_RESULT_REFUSED'); }
+
+      - name: Hosted Re-review
+        id: re_review
+        if: ${{ steps.authority.outputs.ready == 'true' && steps.checkout.outcome == 'success' && (inputs.automated_review == 're-review' || (inputs.automated_review == 'all' && steps.review_gate.outputs.continue == 'true')) }}
+        continue-on-error: true
+        uses: taco3064/shoal-action/hosted-review@701c13c0f92d4f9cf53ec41869132f7958d92130
+        with:
+          operation: re-review
+          station: ${{ github.repository }}
+          station_directory: ${{ github.workspace }}
+          copilot_token: ${{ github.token }}
+          read_token: ${{ github.token }}
+          lifecycle_token: ${{ steps.authority.outputs.reviewer_token }}
+          reviewer_token: ${{ steps.authority.outputs.reviewer_token }}
+          max_ai_credits: '30'
+          timeout_seconds: '180'
+
+      - name: Record credential-free Hosted operational state
+        id: result
+        if: ${{ always() }}
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        env:
+          AUTOMATED_REVIEW: ${{ inputs.automated_review }}
+          AUTHORITY_READY: ${{ steps.authority.outputs.ready }}
+          AUTHORITY_CODE: ${{ steps.authority.outputs.code }}
+          CHECKOUT: ${{ steps.checkout.outcome }}
+          REVIEW_OUTCOME: ${{ steps.review.outcome }}
+          REVIEW_RESULT: ${{ steps.review.outputs.result }}
+          REVIEW_STATUS: ${{ steps.review.outputs.status }}
+          REVIEW_STOP: ${{ steps.review.outputs.stop_semantic_work }}
+          RE_REVIEW_OUTCOME: ${{ steps.re_review.outcome }}
+          RE_REVIEW_RESULT: ${{ steps.re_review.outputs.result }}
+          RE_REVIEW_STATUS: ${{ steps.re_review.outputs.status }}
+          RE_REVIEW_STOP: ${{ steps.re_review.outputs.stop_semantic_work }}
+        with:
+          script: |
+            const mode = process.env.AUTOMATED_REVIEW;
+            const results = []; let stop = true;
+            let code = 'HOSTED_RESULT_REFUSED';
+            const authorityCodes = ['HOSTED_MODE_REFUSED', 'REVIEWER_AUTHORITY_UNAVAILABLE', 'BROKER_CONFIGURATION_REFUSED', 'BROKER_RESULT_REFUSED'];
+            if (process.env.AUTHORITY_READY !== 'true') {
+              code = authorityCodes.includes(process.env.AUTHORITY_CODE) ? process.env.AUTHORITY_CODE : 'REVIEWER_AUTHORITY_UNAVAILABLE';
+            } else if (process.env.CHECKOUT !== 'success') {
+              code = 'STATION_CHECKOUT_UNAVAILABLE';
+            } else {
+              code = 'HOSTED_RESULT_AVAILABLE'; stop = false;
+              const operations = mode === 'all' ? ['review', 're-review'] : [mode];
+              for (const operation of operations) {
+                if (stop) break;
+                const prefix = operation === 'review' ? 'REVIEW' : 'RE_REVIEW';
+                try {
+                  const r = JSON.parse(process.env[`${prefix}_RESULT`]);
+                  if (process.env[`${prefix}_OUTCOME`] !== 'success' || r.formatVersion !== 1 || r.operation !== operation ||
+                      !['NO_CHANGES', 'COMPLETED', 'REFUSED', 'PARTIAL'].includes(r.runtime?.status) ||
+                      r.runtime.status !== process.env[`${prefix}_STATUS`] || typeof r.stopSemanticWork !== 'boolean' ||
+                      String(r.stopSemanticWork) !== process.env[`${prefix}_STOP`] || !Array.isArray(r.failures) ||
+                      r.failures.some(c => typeof c !== 'string' || !/^[A-Z][A-Z0-9_]{0,79}$/.test(c))) throw new Error();
+                  // Project only classified codes; no raw faults, explanations, or broker values.
+                  results.push({ operation, status: r.runtime.status, failures: r.failures, stopSemanticWork: r.stopSemanticWork });
+                  stop = r.stopSemanticWork || r.runtime.status === 'REFUSED' || r.failures.length > 0;
+                } catch { code = 'HOSTED_RESULT_REFUSED'; stop = true; }
+              }
+            }
+            core.setOutput('stop_semantic_work', String(stop));
+            const result = JSON.stringify({ formatVersion: 1, mode: ['review', 're-review', 'all'].includes(mode) ? mode : 'invalid', code, results, stopSemanticWork: stop });
+            core.setOutput('result', result);
+            core.info(result);

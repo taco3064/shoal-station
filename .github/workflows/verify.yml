@@ -25,10 +25,15 @@ jobs:
         run: |
           python3 -m venv "$RUNNER_TEMP/station-tests"
           "$RUNNER_TEMP/station-tests/bin/python" -m pip install -r .github/tests/requirements.txt
+      - name: Set up the locked station fixture runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24.19.0'
       - name: Verify workflow byte and recovery boundaries
         run: |
           "$RUNNER_TEMP/station-tests/bin/python" -m unittest discover -s .github/tests -v
       - name: Record exact managed-surface identities
         run: |
           git show HEAD:.github/workflows/reviewer-summary.yml | sha256sum
+          git show HEAD:.github/workflows/hosted-review.yml | sha256sum
           git show HEAD:.github/ISSUE_TEMPLATE/review-request.yml | sha256sum

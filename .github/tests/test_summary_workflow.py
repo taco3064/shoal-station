@@ -177,12 +177,12 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(WORKFLOW['permissions'], {})
         self.assertEqual(set(WORKFLOW['on']), {'schedule', 'workflow_dispatch'})
         self.assertEqual(WORKFLOW['jobs']['publish']['needs'], 'summary')
-        self.assertNotIn('if', WORKFLOW['jobs']['publish'])
+        self.assertEqual(WORKFLOW['jobs']['publish']['if'], "${{ always() && needs.summary.result == 'success' }}")
         self.assertEqual(WORKFLOW['jobs']['summary']['outputs']['digest'], '${{ steps.produced.outputs.digest }}')
         order = [s.get('id') for s in SUMMARY if s.get('id')]
         self.assertEqual(order, ['compute', 'produced', 'attest', 'integrity', 'artifact', 'correspondence'])
         for job in WORKFLOW['jobs'].values():
-            for selected in job['steps']:
+            for selected in job.get('steps', []):
                 self.assertNotIn('continue-on-error', selected)
                 if 'uses' in selected:
                     self.assertRegex(selected['uses'], r'@([0-9a-f]{40})$')
@@ -207,7 +207,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(steps[0]['with']['ref'], '${{ github.event.pull_request.head.sha || github.sha }}')
         self.assertEqual(steps[0]['with']['persist-credentials'], 'false')
         self.assertIn('git rev-parse HEAD', steps[1]['run'])
-        self.assertIn('unittest discover', steps[3]['run'])
+        self.assertTrue(any('unittest discover' in s.get('run', '') for s in steps))
 
     def test_failed_stage_diagnostics_remain_failed(self):
         diagnostic = SUMMARY[-1]

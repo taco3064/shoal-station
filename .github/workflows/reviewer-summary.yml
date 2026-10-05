@@ -7,8 +7,49 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: shoal-station-${{ github.repository_id }}
+  cancel-in-progress: false
+  queue: max
+
 jobs:
+  mode:
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      automated_review: ${{ steps.mode.outputs.automated_review }}
+    steps:
+      - name: Validate Reviewer scheduled semantic mode
+        id: mode
+        env:
+          AUTOMATED_REVIEW: ${{ vars.SHOAL_AUTOMATED_REVIEW }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$AUTOMATED_REVIEW" in
+            ''|none) mode=none ;;
+            review|re-review|all) mode="$AUTOMATED_REVIEW" ;;
+            *)
+              mode=none
+              echo '::warning::Invalid SHOAL_AUTOMATED_REVIEW; semantic work refused, Reviewer Summary continues'
+              ;;
+          esac
+          printf 'automated_review=%s\n' "$mode" >> "$GITHUB_OUTPUT"
+
+  hosted:
+    needs: mode
+    if: ${{ needs.mode.outputs.automated_review != 'none' && needs.mode.outputs.automated_review != '' }}
+    permissions:
+      contents: read
+      copilot-requests: write
+      id-token: write
+    uses: ./.github/workflows/hosted-review.yml
+    with:
+      automated_review: ${{ needs.mode.outputs.automated_review }}
+
   summary:
+    needs: [mode, hosted]
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -103,6 +144,7 @@ jobs:
 
   publish:
     needs: summary
+    if: ${{ always() && needs.summary.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
