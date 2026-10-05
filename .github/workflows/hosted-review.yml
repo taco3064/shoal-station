@@ -114,7 +114,7 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
 
-      # Exact integration pin from shoal-action PR #14; not a merge/release claim.
+      # Exact post-merge Action pin from shoal-action PR #14.
       # Production release/provenance verification remains an owner-operated gate.
       # The broker supplies separate short-lived station-lifecycle and Reviewer
       # credentials. The Copilot workflow token has no Issue-write permission.
@@ -122,7 +122,7 @@ jobs:
         id: review
         if: ${{ steps.authority.outputs.ready == 'true' && steps.checkout.outcome == 'success' && (inputs.automated_review == 'review' || inputs.automated_review == 'all') }}
         continue-on-error: true
-        uses: taco3064/shoal-action/hosted-review@13ab1fd2a6a927e22dc37851cbfc0a28b177aebb
+        uses: taco3064/shoal-action/hosted-review@85dde9b9760be9a640b29b1f4c2a6aa911b2cb37
         with:
           operation: review
           station: ${{ github.repository }}
@@ -164,7 +164,7 @@ jobs:
         id: re_review
         if: ${{ steps.authority.outputs.ready == 'true' && steps.checkout.outcome == 'success' && (inputs.automated_review == 're-review' || (inputs.automated_review == 'all' && steps.review_gate.outputs.continue == 'true')) }}
         continue-on-error: true
-        uses: taco3064/shoal-action/hosted-review@13ab1fd2a6a927e22dc37851cbfc0a28b177aebb
+        uses: taco3064/shoal-action/hosted-review@85dde9b9760be9a640b29b1f4c2a6aa911b2cb37
         with:
           operation: re-review
           station: ${{ github.repository }}
