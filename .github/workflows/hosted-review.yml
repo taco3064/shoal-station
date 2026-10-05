@@ -88,12 +88,16 @@ jobs:
               if (result.formatVersion !== 1 || result.repositoryId !== process.env.REPOSITORY_ID ||
                   result.reviewerId !== process.env.OWNER_ID ||
                   typeof result.reviewerToken !== 'string' || !/^[A-Za-z0-9_]{20,512}$/.test(result.reviewerToken) ||
+                  typeof result.lifecycleToken !== 'string' || !/^[A-Za-z0-9_]{20,512}$/.test(result.lifecycleToken) ||
+                  result.lifecycleToken === result.reviewerToken ||
                   !Number.isFinite(expires) || expires <= now + 60000 || expires > now + 8 * 60 * 60 * 1000) {
                 refuse('BROKER_RESULT_REFUSED'); return;
               }
               core.setSecret(result.reviewerToken);
+              core.setSecret(result.lifecycleToken);
               // Ephemeral same-job runner output only; never a workflow/job output or artifact.
               core.setOutput('reviewer_token', result.reviewerToken);
+              core.setOutput('lifecycle_token', result.lifecycleToken);
               core.setOutput('ready', 'true');
               core.setOutput('code', 'AUTHORITY_AVAILABLE');
             } catch {
@@ -109,22 +113,22 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
 
-      # Provisional integration pin from action#13, not a final production pin.
+      # Provisional integration pin from the repaired Action candidate; not a merge/release claim.
       # Replace only these reusable-workflow pins after the coordinated Action merge.
-      # Reviewer authority supplies Issue-state and personal roles under separate
-      # host allowlists; the Copilot workflow token has no Issue-write permission.
+      # The broker supplies separate short-lived station-lifecycle and Reviewer
+      # credentials. The Copilot workflow token has no Issue-write permission.
       - name: Hosted Initial Review
         id: review
         if: ${{ steps.authority.outputs.ready == 'true' && steps.checkout.outcome == 'success' && (inputs.automated_review == 'review' || inputs.automated_review == 'all') }}
         continue-on-error: true
-        uses: taco3064/shoal-action/hosted-review@701c13c0f92d4f9cf53ec41869132f7958d92130
+        uses: taco3064/shoal-action/hosted-review@916ae274fd811ab35a53e1b5884dbf5664f6c03e
         with:
           operation: review
           station: ${{ github.repository }}
           station_directory: ${{ github.workspace }}
           copilot_token: ${{ github.token }}
           read_token: ${{ github.token }}
-          lifecycle_token: ${{ steps.authority.outputs.reviewer_token }}
+          lifecycle_token: ${{ steps.authority.outputs.lifecycle_token }}
           reviewer_token: ${{ steps.authority.outputs.reviewer_token }}
           max_ai_credits: '30'
           timeout_seconds: '180'
@@ -159,14 +163,14 @@ jobs:
         id: re_review
         if: ${{ steps.authority.outputs.ready == 'true' && steps.checkout.outcome == 'success' && (inputs.automated_review == 're-review' || (inputs.automated_review == 'all' && steps.review_gate.outputs.continue == 'true')) }}
         continue-on-error: true
-        uses: taco3064/shoal-action/hosted-review@701c13c0f92d4f9cf53ec41869132f7958d92130
+        uses: taco3064/shoal-action/hosted-review@916ae274fd811ab35a53e1b5884dbf5664f6c03e
         with:
           operation: re-review
           station: ${{ github.repository }}
           station_directory: ${{ github.workspace }}
           copilot_token: ${{ github.token }}
           read_token: ${{ github.token }}
-          lifecycle_token: ${{ steps.authority.outputs.reviewer_token }}
+          lifecycle_token: ${{ steps.authority.outputs.lifecycle_token }}
           reviewer_token: ${{ steps.authority.outputs.reviewer_token }}
           max_ai_credits: '30'
           timeout_seconds: '180'

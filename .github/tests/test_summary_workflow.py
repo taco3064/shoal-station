@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -163,7 +164,7 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(state['objects'][sha], obj)
         self.assertEqual(set(state['refs']), {f'refs/tags/shoal-summary-1234-100-{n}' for n in [1, 2, 3]})
         # Re-read the older immutable locator through the same anonymous boundary.
-        subprocess.run(['curl', '--output', 'old.json',
+        subprocess.run([sys.executable, str(ROOT / '.github/tests/mock_curl.py'), '--output', 'old.json',
                         'https://raw.githubusercontent.com/owner/station/shoal-summary-1234-100-1/reviewer-summary.json'],
                        cwd=self.path, env=self.env, check=True)
         self.assertEqual((self.path / 'old.json').read_bytes(), RAW)

@@ -84,3 +84,19 @@ IDs, digests, verified provenance, and any deviations. Distinguish missing
 access, missing credentials, or unsupported APIs from implementation failures.
 Do not call a downstream rejected Summary accepted merely because the workflow
 succeeded. Downstream selection remains owned by shoal-app.
+
+
+## Hosted authority response contract for app#49
+
+The enabled-mode OIDC request is bound to repository/user/workflow/run identities.
+A successful formatVersion=1 response supplies repositoryId, reviewerId,
+expiresAt, reviewerToken and lifecycleToken. Both tokens are short-lived,
+non-empty, distinct, masked and retained only as same-job step outputs.
+
+Platform broker issuance must ensure lifecycleToken is station-scoped authority
+for the adapter's Issue-state allowlist, while reviewerToken is the bound
+Reviewer's user authority. Only reviewerToken enters the Action reviewer_token
+input. Only lifecycleToken enters lifecycle_token. Neither enters Copilot;
+Copilot/read inputs retain the read-only workflow token. Missing, malformed,
+expired or equal token fields refuse before invoking Hosted Review. This
+consumer contract does not claim the production broker is implemented.

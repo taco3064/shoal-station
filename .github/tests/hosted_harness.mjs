@@ -8,6 +8,7 @@ const steps = {}, operations = [], calls = [], warnings = [], logs = [];
 const masks = [];
 const oidc = 'synthetic_oidc_value';
 const reviewer = 'ghu_SYNTHETIC_PERSONAL_TOKEN';
+const lifecycle = 'ghs_SYNTHETIC_STATION_TOKEN';
 const env = {
   ...process.env, AUTOMATED_REVIEW: mode,
   BROKER_URL: faults.brokerMissing ? '' : 'https://broker.example/hosted/authority',
@@ -38,7 +39,7 @@ const fetch = async (url, options) => {
   if (options.headers.Authorization !== `Bearer ${oidc}`) throw new Error('Missing OIDC');
   if (faults.brokerNetwork) throw new Error('SECRET external exception');
   const result = {
-    formatVersion: 1, repositoryId: '17', reviewerId: '42', reviewerToken: reviewer,
+    formatVersion: 1, repositoryId: '17', reviewerId: '42', reviewerToken: reviewer, lifecycleToken: lifecycle,
     expiresAt: new Date(Date.now() + 3600000).toISOString(), ...faults.brokerResult
   };
   const raw = faults.brokerMalformed ? 'SECRET not json' : faults.brokerOversized ? 'x'.repeat(9000) : JSON.stringify(result);
@@ -66,8 +67,8 @@ for (const step of hosted.jobs.hosted.steps) {
       const operation = step.with.operation;
       operations.push(operation);
       const credentialRoles = Object.fromEntries(['copilot_token', 'read_token', 'lifecycle_token', 'reviewer_token'].map(k => [k, evaluate(step.with[k])]));
-      if (credentialRoles.reviewer_token !== reviewer || credentialRoles.lifecycle_token !== reviewer ||
-          credentialRoles.copilot_token === reviewer || credentialRoles.read_token === reviewer) throw new Error('authority crossover');
+      if (credentialRoles.reviewer_token !== reviewer || credentialRoles.lifecycle_token !== lifecycle ||
+          credentialRoles.copilot_token === reviewer || credentialRoles.read_token === reviewer || credentialRoles.copilot_token === lifecycle || credentialRoles.read_token === lifecycle) throw new Error('authority crossover');
       const fault = faults[operation] || {};
       if (fault.infrastructure) throw new Error('host infrastructure failed');
       const result = {
@@ -102,5 +103,5 @@ const publishExpression = caller.jobs.publish.if.slice(3, -2);
 output.publishAllowed = Function('needs', 'always', `return (${publishExpression});`)(
   { summary: { result: fixture.summaryResult || 'success' } }, () => true);
 const text = JSON.stringify(output);
-if ([oidc, reviewer, 'SECRET'].some(secret => text.includes(secret))) throw new Error('Credential/diagnostic disclosure');
+if ([oidc, reviewer, lifecycle, 'SECRET'].some(secret => text.includes(secret))) throw new Error('Credential/diagnostic disclosure');
 process.stdout.write(text);

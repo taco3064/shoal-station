@@ -189,7 +189,7 @@ class HostedWorkflowTests(unittest.TestCase):
             inputs = STEPS[identity]['with']
             for role in ['copilot_token', 'read_token']:
                 self.assertEqual(inputs[role], '${{ github.token }}')
-            self.assertEqual(inputs['lifecycle_token'], '${{ steps.authority.outputs.reviewer_token }}')
+            self.assertEqual(inputs['lifecycle_token'], '${{ steps.authority.outputs.lifecycle_token }}')
             self.assertEqual(inputs['reviewer_token'], '${{ steps.authority.outputs.reviewer_token }}')
             self.assertEqual(inputs['max_ai_credits'], '30')
             self.assertEqual(inputs['timeout_seconds'], '180')
@@ -199,6 +199,15 @@ class HostedWorkflowTests(unittest.TestCase):
         self.assertNotIn('upload-artifact', HOSTED_BYTES.decode())
         self.assertNotIn('writeFile', HOSTED_BYTES.decode())
         self.assertEqual(STEPS['checkout']['with']['persist-credentials'], 'false')
+
+    def test_lifecycle_authority_is_required_and_distinct(self):
+        for token in ['', None, 'bad token', 'ghu_SYNTHETIC_PERSONAL_TOKEN']:
+            result = run_hosted('all', brokerResult={'lifecycleToken': token})
+            self.assertEqual(result['operations'], [])
+            self.assertEqual(result['authority']['ready'], 'false')
+            self.assertEqual(result['authority']['code'], 'BROKER_RESULT_REFUSED')
+        for outputs in [HOSTED['jobs']['hosted']['outputs'], HOSTED['on']['workflow_call']['outputs']]:
+            self.assertNotIn('lifecycle_token', json.dumps(outputs))
 
     def test_managed_surface_and_policy_are_not_rewritten(self):
         # Station does not implement its own migration; gh shoal init owns it.
