@@ -122,7 +122,7 @@ jobs:
         id: review
         if: ${{ steps.authority.outputs.ready == 'true' && steps.checkout.outcome == 'success' && (inputs.automated_review == 'review' || inputs.automated_review == 'all') }}
         continue-on-error: true
-        uses: taco3064/shoal-action/hosted-review@94f9d7a36a783d093b9ceafff0789f6983337b73
+        uses: taco3064/shoal-action/hosted-review@c39a313795b9a9d941e6e737bd03687d8292d64c
         with:
           operation: review
           station: ${{ github.repository }}
@@ -164,7 +164,7 @@ jobs:
         id: re_review
         if: ${{ steps.authority.outputs.ready == 'true' && steps.checkout.outcome == 'success' && (inputs.automated_review == 're-review' || (inputs.automated_review == 'all' && steps.review_gate.outputs.continue == 'true')) }}
         continue-on-error: true
-        uses: taco3064/shoal-action/hosted-review@94f9d7a36a783d093b9ceafff0789f6983337b73
+        uses: taco3064/shoal-action/hosted-review@c39a313795b9a9d941e6e737bd03687d8292d64c
         with:
           operation: re-review
           station: ${{ github.repository }}
