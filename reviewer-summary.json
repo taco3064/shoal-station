@@ -1,0 +1,15 @@
+{
+  "protocolVersion": 1,
+  "summarySchemaVersion": 2,
+  "reviewerNode": {
+    "repositoryId": 1379044983
+  },
+  "metrics": {
+    "invalidReviewCommentCount": 0,
+    "reReviewRequestIssueCount": 0,
+    "reviewBackedStarCount": 0,
+    "validReviewRequestIssueCount": 0,
+    "pendingReviewRequestCount": 0,
+    "completedReviewRequestCount": 0
+  }
+}
