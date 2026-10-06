@@ -88,8 +88,8 @@ jobs:
               const now = Date.now();
               if (result.formatVersion !== 1 || result.repositoryId !== process.env.REPOSITORY_ID ||
                   result.reviewerId !== process.env.OWNER_ID ||
-                  typeof result.reviewerToken !== 'string' || !/^[A-Za-z0-9_]{20,512}$/.test(result.reviewerToken) ||
-                  typeof result.lifecycleToken !== 'string' || !/^[A-Za-z0-9_]{20,512}$/.test(result.lifecycleToken) ||
+                  typeof result.reviewerToken !== 'string' || !/^[A-Za-z0-9_.-]{20,2048}$/.test(result.reviewerToken) ||
+                  typeof result.lifecycleToken !== 'string' || !/^[A-Za-z0-9_.-]{20,2048}$/.test(result.lifecycleToken) ||
                   result.lifecycleToken === result.reviewerToken ||
                   !Number.isFinite(expires) || expires <= now + 60000 || expires > now + 8 * 60 * 60 * 1000) {
                 refuse('BROKER_RESULT_REFUSED'); return;
